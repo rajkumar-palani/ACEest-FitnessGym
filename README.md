@@ -29,7 +29,7 @@ ACEest-FitnessGym/
 │       └── main.yml        # GitHub Actions CI/CD pipeline
 ├── Dockerfile              # Multi-stage Docker image definition
 ├── README.md              # This file
-└── code/                  # Original baseline code files
+└── reference/                  # Original baseline code files
 ```
 
 ## 📦 Core Components
