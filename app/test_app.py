@@ -87,7 +87,7 @@ class TestAuthentication:
 
     def test_login_empty_body(self, client):
         """Test login with empty body"""
-        response = client.post('/api/login')
+        response = client.post('/api/login', json={})
         assert response.status_code == 400
 
 
