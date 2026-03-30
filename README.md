@@ -410,13 +410,18 @@ For Jenkins integration:
    pytest test_app.py -v --junitxml=results.xml
 
    # Build Docker image
-   docker build -t aceest-fitness:${BUILD_NUMBER} .
+   docker build -t aceest-fitness-test .
+
+   # Docker Container run
+   docker run --rm -d --name aceest-fitness-test-container -p 5000:5000 aceest-fitness-test
    ```
 
 5. **Post-build Actions**:
    - Publish test results (JUnit format)
    - Archive Docker image
    - Trigger deployment pipeline
+
+
 
 ### Jenkins Webhook Configuration
 
