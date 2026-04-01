@@ -113,62 +113,81 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Clients"
-          value={stats.totalClients}
-          icon="👥"
-          color="blue"
-        />
-        <StatCard
-          title="Active Members"
-          value={stats.activeClients}
-          icon="✅"
-          color="green"
-        />
-        <StatCard
-          title="Workouts This Week"
-          value={stats.recentWorkouts}
-          icon="💪"
-          color="purple"
-        />
-        <StatCard
-          title="Avg Adherence"
-          value={`${stats.avgAdherence}%`}
-          icon="📊"
-          color="yellow"
-        />
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Quick Actions
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <QuickActionCard
-              title="Add New Client"
-              description="Register a new gym member"
-              to="/clients"
-              icon="➕"
-              color="green"
-            />
-            <QuickActionCard
-              title="Log Workout"
-              description="Record a client's workout session"
-              to="/workouts"
-              icon="🏋️"
+      {/* Main Grid (left/right) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left: Stats + Recent Activity */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Clients"
+              value={stats.totalClients}
+              icon="👥"
               color="blue"
             />
-            <QuickActionCard
-              title="View Progress"
-              description="Check client metrics and adherence"
-              to="/metrics"
-              icon="📈"
+            <StatCard
+              title="Active Members"
+              value={stats.activeClients}
+              icon="✅"
+              color="green"
+            />
+            <StatCard
+              title="Workouts This Week"
+              value={stats.recentWorkouts}
+              icon="💪"
               color="purple"
             />
+            <StatCard
+              title="Avg Adherence"
+              value={`${stats.avgAdherence}%`}
+              icon="📊"
+              color="yellow"
+            />
+          </div>
+
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                Recent Activity
+              </h3>
+              <div className="text-center py-8 text-gray-500">
+                <p>Recent client activities and workout logs will appear here.</p>
+                <p className="text-sm mt-2">Feature coming in next update.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Quick Actions */}
+        <div className="lg:col-span-4">
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                Quick Actions
+              </h3>
+              <div className="grid grid-cols-1 gap-4">
+                <QuickActionCard
+                  title="Add New Client"
+                  description="Register a new gym member"
+                  to="/clients"
+                  icon="➕"
+                  color="green"
+                />
+                <QuickActionCard
+                  title="Log Workout"
+                  description="Record a client's workout session"
+                  to="/workouts"
+                  icon="🏋️"
+                  color="blue"
+                />
+                <QuickActionCard
+                  title="View Progress"
+                  description="Check client metrics and adherence"
+                  to="/metrics"
+                  icon="📈"
+                  color="purple"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

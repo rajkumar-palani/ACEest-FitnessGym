@@ -6,12 +6,12 @@ export default function Layout({ children }) {
   const { sidebarOpen } = useApp();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main content */}
-      <div className={`md:ml-64 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64 md:ml-0' : 'ml-0'}`}>
         {/* Header */}
         <Header />
 

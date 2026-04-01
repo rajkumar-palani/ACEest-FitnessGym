@@ -124,12 +124,12 @@ export default function MetricsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Metrics & Progress</h1>
           <p className="text-gray-600">Track body measurements and adherence</p>
         </div>
-        <div className="space-x-3">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => {
               resetProgressForm();

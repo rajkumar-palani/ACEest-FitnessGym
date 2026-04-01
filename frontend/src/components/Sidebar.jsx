@@ -28,10 +28,11 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+        md:static md:translate-x-0 md:shadow-none
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full md:h-screen">
           {/* Logo */}
           <div className="flex items-center justify-center h-16 px-4 bg-blue-600">
             <h2 className="text-white text-lg font-semibold">ACEest</h2>

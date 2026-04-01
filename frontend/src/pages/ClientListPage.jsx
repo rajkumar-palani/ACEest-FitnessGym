@@ -120,7 +120,7 @@ export default function ClientListPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
           <p className="text-gray-600">Manage your gym members</p>

@@ -108,7 +108,7 @@ export default function ClientDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{client.name}</h1>
             <p className="text-gray-600 mt-1">{client.email}</p>
