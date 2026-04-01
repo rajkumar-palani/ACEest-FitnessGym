@@ -2,16 +2,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from './context/AuthContext';
 import { useApp } from './context/AppContext';
 
-// Pages - will be created in next phase
-// import LoginPage from './pages/LoginPage';
-// import Dashboard from './pages/Dashboard';
-// import ClientListPage from './pages/ClientListPage';
-// import ClientDetailPage from './pages/ClientDetailPage';
-// import WorkoutPage from './pages/WorkoutPage';
-// import MetricsPage from './pages/MetricsPage';
+// Pages
+import LoginPage from './pages/LoginPage';
+import Dashboard from './pages/Dashboard';
+import ClientListPage from './pages/ClientListPage';
+import ClientDetailPage from './pages/ClientDetailPage';
+import WorkoutPage from './pages/WorkoutPage';
+import MetricsPage from './pages/MetricsPage';
 
-// Components - will be created in next phase
-// import Layout from './components/Layout';
+// Components
+import Layout from './components/Layout';
 
 /**
  * Protected Route Component
@@ -63,20 +63,6 @@ function LoginRoute({ children }) {
   return children;
 }
 
-/**
- * Placeholder component during development
- */
-function Placeholder({ pageTitle }) {
-  return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">{pageTitle}</h1>
-        <p className="text-gray-600">Coming soon...</p>
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   const { isAuthenticated } = useAuth();
 
@@ -88,7 +74,7 @@ export default function App() {
           path="/login"
           element={
             <LoginRoute>
-              <Placeholder pageTitle="Login Page" />
+              <LoginPage />
             </LoginRoute>
           }
         />
@@ -98,7 +84,9 @@ export default function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Placeholder pageTitle="Dashboard" />
+              <Layout>
+                <Dashboard />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -107,7 +95,9 @@ export default function App() {
           path="/clients"
           element={
             <ProtectedRoute>
-              <Placeholder pageTitle="Clients" />
+              <Layout>
+                <ClientListPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -116,7 +106,9 @@ export default function App() {
           path="/clients/:id"
           element={
             <ProtectedRoute>
-              <Placeholder pageTitle="Client Details" />
+              <Layout>
+                <ClientDetailPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -125,7 +117,9 @@ export default function App() {
           path="/workouts"
           element={
             <ProtectedRoute>
-              <Placeholder pageTitle="Workouts" />
+              <Layout>
+                <WorkoutPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -134,7 +128,9 @@ export default function App() {
           path="/metrics"
           element={
             <ProtectedRoute>
-              <Placeholder pageTitle="Metrics & Progress" />
+              <Layout>
+                <MetricsPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
