@@ -88,6 +88,110 @@ The application uses SQLite with the following tables:
    curl http://localhost:5000/health
    ```
 
+### Docker Compose Setup (Recommended)
+
+Docker Compose provides an easy way to run the application with persistent database storage in a single command.
+
+#### Prerequisites for Docker Compose
+
+- Docker (version 20.10+)
+- Docker Compose (version 2.0+)
+- Git
+
+#### Quick Start with Docker Compose
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/ACEest-FitnessGym.git
+   cd ACEest-FitnessGym
+   ```
+
+2. **Start the application**
+   ```bash
+   docker-compose up -d
+   ```
+
+   This command will:
+   - Build the Docker image from the `Dockerfile`
+   - Create a named volume `aceest-data` for persistent database storage
+   - Start the container in detached mode
+   - Expose the API on port `5000`
+
+3. **Verify the application is running**
+   ```bash
+   docker-compose logs -f
+   ```
+
+   Wait for the message: `"ACEest API is running"` or check the health endpoint:
+   ```bash
+   curl http://localhost:5000/health
+   ```
+
+#### Docker Compose Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `docker-compose up -d` | Start the application in background |
+| `docker-compose logs -f` | View live application logs |
+| `docker-compose stop` | Stop the running container |
+| `docker-compose start` | Restart a stopped container |
+| `docker-compose restart` | Restart the running container |
+| `docker-compose down` | Stop container (database persists) |
+| `docker-compose down -v` | Stop container and remove volume |
+| `docker-compose ps` | Show running containers |
+| `docker-compose exec app bash` | Access container shell |
+
+#### Data Persistence
+
+The `aceest-data` volume automatically persists:
+- SQLite database (`aceest_fitness.db`)
+- All client data, workouts, metrics, and user records
+
+**Data survives:**
+- Container stop/start cycles
+- Docker Compose restart
+- Host machine reboots
+
+**Data is deleted only when:**
+```bash
+docker-compose down -v
+```
+
+#### Accessing the Application
+
+After starting with Docker Compose, the application is available at:
+- **Base URL**: `http://localhost:5000`
+- **Health Check**: `http://localhost:5000/health`
+
+**Login Credentials:**
+- Username: `admin` | Password: `admin` (Admin role)
+- Username: `trainer` | Password: `trainer` (Trainer role)
+
+#### Troubleshooting Docker Compose
+
+**Issue: Container won't start**
+```bash
+# Check logs for errors
+docker-compose logs
+
+# Verify Docker image built successfully
+docker-compose build --no-cache
+```
+
+**Issue: Port 5000 already in use**
+```bash
+# Modify docker-compose.yml and change port mapping:
+# ports:
+#   - "5001:5000"  # Use external port 5001 instead
+```
+
+**Issue: Database permissions error**
+```bash
+# Reset the volume and start fresh
+docker-compose down -v
+docker-compose up -d
+```
+
 ## 📚 API Endpoints
 
 All endpoints (except `/health` and `/api/login`) require authentication headers:
