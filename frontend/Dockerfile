@@ -26,7 +26,7 @@ FROM nginx:alpine AS final
 COPY --from=production /app/dist /usr/share/nginx/html
 
 # Copy custom nginx configuration
-COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
 EXPOSE 80
