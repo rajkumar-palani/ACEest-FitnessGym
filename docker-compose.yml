@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  app:
+  backend:
     build: .
-    container_name: aceest-fitness-app
+    container_name: aceest-fitness-backend
     ports:
       - "5000:5000"
     volumes:
@@ -18,7 +18,50 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
+    networks:
+      - aceest-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: aceest-fitness-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - aceest-network
+
+  nginx:
+    build: ./nginx
+    container_name: aceest-fitness-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - aceest-network
 
 volumes:
   aceest-data:
     driver: local
+
+networks:
+  aceest-network:
+    driver: bridge
