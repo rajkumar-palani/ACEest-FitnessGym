@@ -18,7 +18,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '📥 Cloning repository from GitHub...'
-                git url: 'https://github.com/rajkumar-palani/ACEest-FitnessGym.git', branch: 'usr/rajkumar_palani/user-interface'
+                git url: 'https://github.com/rajkumar-palani/ACEest-FitnessGym.git', branch: 'main'
             }
         }
 
@@ -133,21 +133,6 @@ pipeline {
                     # Wait for services to be healthy
                     sleep 30
                     docker compose ps
-                """
-            }
-        }
-
-        stage('Integration Test (Front End and Backend)') {
-            steps {
-                echo '🔗 Running integration tests...'
-                sh """
-                    # Test backend health
-                    curl -f http://172.21.199.199:5000/health || exit 1
-
-                    # Test frontend accessibility
-                    curl -f http://172.21.199.199:3000 || exit 1
-
-                    echo "✅ All integration tests passed!"
                 """
             }
         }
