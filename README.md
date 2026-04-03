@@ -23,7 +23,7 @@ This project demonstrates professional full-stack development practices includin
 - **Containerization**: Multi-service Docker Compose with nginx reverse proxy
 - **Version Control**: Git/GitHub with meaningful commit history
 - **Automated Testing**: Comprehensive Pytest unit test suite
-- **CI/CD Pipeline**: GitHub Actions workflow automation
+- **CI/CD Pipeline**: Jenkins pipeline in root `Jenkinsfile` and GitHub Actions workflow automation
 - **Code Quality**: Linting, security scanning, and coverage reporting
 - **Infrastructure as Code**: Docker and Docker Compose configuration
 
@@ -49,9 +49,22 @@ ACEest-FitnessGym/
 │   └── nginx.conf               # Nginx configuration for routing
 ├── docker-compose.yml           # Multi-container orchestration
 ├── Dockerfile                   # Backend container definition
+├── Jenkinsfile                  # Jenkins pipeline configuration
 ├── plan.md                      # Implementation roadmap and documentation
 └── README.md                    # This documentation
 ```
+
+## 🤖 Jenkins CI/CD (Jenkinsfile)
+
+The project includes a root-level `Jenkinsfile` that defines a full pipeline in Jenkins:
+- Clean workspace, clone repository
+- Build backend + frontend Docker images with tags
+- Run backend tests with pytest and publish JUnit reports
+- Perform vulnerability scans (Clair and npm audit)
+- Push images to Docker Hub
+- Deploy via `docker compose up -d --build`
+- Run integration checks for backend and frontend endpoints
+- Clean workspace and archive artifacts
 
 ## 🎨 Frontend Features
 
