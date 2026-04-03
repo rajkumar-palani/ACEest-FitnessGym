@@ -50,7 +50,6 @@ ACEest-FitnessGym/
 ├── docker-compose.yml           # Multi-container orchestration
 ├── Dockerfile                   # Backend container definition
 ├── Jenkinsfile                  # Jenkins pipeline configuration
-├── plan.md                      # Implementation roadmap and documentation
 └── README.md                    # This documentation
 ```
 
