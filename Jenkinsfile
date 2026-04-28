@@ -6,6 +6,7 @@ pipeline {
         DOCKER_IMAGE_FRONTEND = 'aceest-fitness-frontend'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
         DOCKER_REGISTRY = 'docker.io/rajswastik'  // Hub Docker registry user prefix
+        SONAR_HOST_URL = 'http://192.168.255.243:9000'  // Update with your SonarQube server URL
     }
 
     stages {
@@ -66,6 +67,27 @@ pipeline {
                     // Publish test results and coverage reports
                     junit 'junit.xml'
                     // publishCoverage adapters: [coberturaAdapter('app/coverage.xml')]
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                echo '🔍 Running SonarQube analysis...'
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    sh """
+                        docker run --rm \\
+                            -e SONAR_HOST_URL='${SONAR_HOST_URL}' \\
+                            -e SONAR_LOGIN='${SONAR_TOKEN}' \\
+                            -v \$(pwd):/usr/src \\
+                            -w /usr/src \\
+                            sonarsource/sonar-scanner-cli \\
+                            -Dsonar.projectKey=ACEest-FitnessGym \\
+                            -Dsonar.sources=app,frontend \\
+                            -Dsonar.host.url=${SONAR_HOST_URL} \\
+                            -Dsonar.login=${SONAR_TOKEN} \\
+                            -Dsonar.exclusions='**/node_modules/**,**/k8s/**,**/docs/**,**/reference/**,**/nginx/**'
+                    """
                 }
             }
         }
@@ -144,7 +166,7 @@ pipeline {
                         echo '🔗 Running integration tests for Backend...'
                         sh """
                             # Test backend health
-                            curl -f http://172.21.199.199:5000/health || exit 1
+                            curl -f http://192.168.255.243:5000/health || exit 1
 
                             echo "✅ Backend integration tests passed!"
                         """
@@ -156,7 +178,7 @@ pipeline {
                         sh """
 
                             # Test frontend accessibility
-                            curl -f http://172.21.199.199:3000 || exit 1
+                            curl -f http://192.168.255.243:3000 || exit 1
 
                             echo "✅ Frontend integration tests passed!"
                         """

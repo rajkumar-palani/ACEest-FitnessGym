@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-app-blue
+  labels:
+    app: aceest-app
+    track: blue
+    traffic-route: inactive
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest-app
+      track: blue
+  template:
+    metadata:
+      labels:
+        app: aceest-app
+        track: blue
+        traffic-route: inactive
+    spec:
+      containers:
+        - name: aceest-backend
+          image: docker.io/rajswastik/aceest-fitness-backend:blue
+          ports:
+            - containerPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-app-green
+  labels:
+    app: aceest-app
+    track: green
+    traffic-route: active
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest-app
+      track: green
+  template:
+    metadata:
+      labels:
+        app: aceest-app
+        track: green
+        traffic-route: active
+    spec:
+      containers:
+        - name: aceest-backend
+          image: docker.io/rajswastik/aceest-fitness-backend:green
+          ports:
+            - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-app
+spec:
+  selector:
+    app: aceest-app
+    traffic-route: active
+  ports:
+    - port: 80
+      targetPort: 5000
+      protocol: TCP
+      name: http
+  type: ClusterIP
+# Toggle the active deployment by switching the service selector between blue and green.
