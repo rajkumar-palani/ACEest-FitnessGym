@@ -19,7 +19,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '📥 Cloning repository from GitHub...'
-                git url: 'https://github.com/rajkumar-palani/ACEest-FitnessGym.git', branch: 'main'
+                git url: 'https://github.com/rajkumar-palani/ACEest-FitnessGym.git', branch: 'usr/rajkumar_palani/deployment_methodologies'
             }
         }
 
