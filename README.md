@@ -53,17 +53,188 @@ ACEest-FitnessGym/
 └── README.md                    # This documentation
 ```
 
-## 🤖 Jenkins CI/CD (Jenkinsfile)
+## 🤖 Jenkins CI/CD Pipeline with Kubernetes Deployment Strategies
 
-The project includes a root-level `Jenkinsfile` that defines a full pipeline in Jenkins:
-- Clean workspace, clone repository
-- Build backend + frontend Docker images with tags
-- Run backend tests with pytest and publish JUnit reports
-- Perform vulnerability scans (Clair and npm audit)
-- Push images to Docker Hub
-- Deploy via `docker compose up -d --build`
-- Run integration checks for backend and frontend endpoints
-- Clean workspace and archive artifacts
+The project includes a root-level `Jenkinsfile` that defines a comprehensive CI/CD pipeline with **5 advanced Kubernetes deployment strategies**:
+
+### Pipeline Parameters
+
+When running the Jenkins job, you can select:
+- **DEPLOYMENT_STRATEGY**: Choose deployment method (rolling-update, blue-green, canary, ab-testing, shadow)
+- **NAMESPACE**: Kubernetes namespace for deployment (default: default)
+- **AUTO_ROLLBACK**: Enable automatic rollback on health check failures (default: true)
+
+### Pipeline Stages
+
+1. **Clean & Checkout**
+   - Clean workspace
+   - Clone repository from GitHub
+   - Checkout specific branch
+
+2. **Build Stage**
+   - Build backend Docker image with tag ${BUILD_NUMBER}
+   - Build frontend Docker image with tag ${BUILD_NUMBER}
+   - Tag images as 'latest' for easy access
+
+3. **Test & Quality**
+   - Run backend tests with pytest (--cov for coverage)
+   - Publish JUnit test results
+   - SonarCloud code quality analysis
+   - Generate XML and HTML coverage reports
+
+4. **Security Scanning**
+   - Backend: Bandit Python security scanner
+   - Frontend: npm audit for dependency vulnerabilities
+   - Parallel execution for faster feedback
+
+5. **Push to Registry**
+   - Docker Hub authentication
+   - Push backend image with build number and latest tags
+   - Push frontend image with build number and latest tags
+   - Secure logout after push
+
+6. **Kubernetes Deployment**
+   - Update manifests with current image tags
+   - Pre-deployment validation of YAML files
+   - Deploy using selected strategy
+   - Health checks and monitoring
+
+### Kubernetes Deployment Strategies
+
+#### 🔄 Rolling Update (Gradual Replacement)
+- **Use Case**: Standard production deployments with zero downtime
+- **Process**: Replaces pods one at a time
+- **Config**: `maxSurge: 1`, `maxUnavailable: 1`
+- **Pods**: 4 replicas
+- **Rollback**: Automatic if health checks fail
+
+```yaml
+Strategy: Gradual pod replacement
+- Old pod: Terminating → New pod: Starting → Monitor → Continue
+- Health Check: After each pod update
+- Rollback: Available if failures detected
+```
+
+#### 🔵🟢 Blue-Green Deployment (Complete Environment Swap)
+- **Use Case**: When you need instant rollback capability
+- **Process**: Maintain two complete production environments
+- **Active**: Currently serving traffic (service selector switches between blue/green)
+- **Testing**: New deployment verified before traffic switch
+- **Advantage**: Instant rollback by switching selector back
+- **No Downtime**: Users unaffected during deployment
+
+```yaml
+- Blue Environment: Previous production (3 replicas)
+- Green Environment: New release (3 replicas)
+- Service Selector: Switches from blue→green after validation
+- Rollback: Switch selector back to blue
+```
+
+#### 🐤 Canary Release (Gradual Rollout to Percentage of Users)
+- **Use Case**: Testing new versions with subset of users
+- **Process**: Route small percentage of traffic to new version
+- **Traffic Split**: 5 stable replicas + 1 canary replica = ~16% traffic to canary
+- **Monitoring**: 5-minute monitoring period during canary
+- **Promotion**: If metrics good, scale up canary; if bad, rollback
+- **Risk Reduction**: Catch issues before full rollout
+
+```yaml
+- Stable Deployment: 5 replicas (84% traffic)
+- Canary Deployment: 1 replica (16% traffic)
+- Metrics Check: Monitor for errors/latency
+- Automatic Promotion: Scale canary if healthy
+```
+
+#### 🔀 A/B Testing (Route by HTTP Header)
+- **Use Case**: Testing different versions simultaneously with specific users
+- **Process**: Route traffic based on HTTP header value
+- **Header-Based**: `x-ab-test: b` routes to variant B
+- **Default**: All traffic without header goes to variant A
+- **Use Cases**: 
+  - Testing UI changes with specific user groups
+  - Performance comparisons
+  - Feature flag implementations
+  - Gradual feature rollout
+
+```yaml
+- Variant A: Standard deployment (default traffic) - 3 replicas
+- Variant B: New version (header-based traffic) - 3 replicas
+- Routing Rule: NGINX Ingress routes based on header
+- Tracking: Analyze metrics per variant
+```
+
+#### 👥 Shadow Deployment (Non-Production Traffic Mirroring)
+- **Use Case**: Testing without affecting real users
+- **Process**: Production traffic is mirrored to shadow deployment
+- **Primary**: Handles actual user requests
+- **Shadow**: Receives copy of production traffic but not used
+- **Advantages**:
+  - Test new code with real production traffic
+  - No user impact from bugs
+  - Realistic performance testing
+  - Database and API integration testing
+- **Implementation**: Service mesh (Istio) or proxy traffic mirroring
+
+```yaml
+- Primary Deployment: Handles production traffic - 4 replicas
+- Shadow Deployment: Receives mirrored traffic - 1 replica
+- Traffic Mirror: Proxy duplicates requests to shadow
+- Monitoring: Collect metrics from shadow separately
+```
+
+### Deployment Configuration
+
+```groovy
+// Environment variables in Jenkinsfile
+DOCKER_REGISTRY = 'docker.io/<<username>>'  // Your Docker Hub username
+DOCKER_TAG = "${env.BUILD_NUMBER}"           // Build number as tag
+DEPLOYMENT_DIR = 'k8s/deployment'            // Kubernetes manifests directory
+SONAR_HOST_URL = 'https://sonarcloud.io'     // SonarCloud endpoint
+SONAR_TOKEN = credentials('sonar-token')     // Jenkins credential reference
+```
+
+### Jenkins Credentials Required
+
+1. **docker-pat**: Docker Hub Personal Access Token
+   - Kind: Username with password
+   - Used for pushing images to Docker Hub
+
+2. **sonar-token**: SonarCloud authentication token
+   - Kind: Secret text
+   - Generate from: SonarCloud account → Security → Tokens
+
+3. **kubeconfig**: Kubernetes cluster configuration (if deploying to K8s)
+   - Kind: Secret text / File
+   - Contains cluster connection details
+
+### Running the Pipeline
+
+1. **Trigger manually** in Jenkins with parameters:
+   ```
+   DEPLOYMENT_STRATEGY: Select from dropdown
+   NAMESPACE: Enter target Kubernetes namespace
+   AUTO_ROLLBACK: Enable/disable automatic rollback
+   ```
+
+2. **Monitor pipeline execution**:
+   - View logs for each stage
+   - Check artifact archival (test results, manifests)
+   - Verify deployment in Kubernetes
+
+3. **Post-deployment**:
+   - Health checks validate deployment
+   - Smoke tests confirm functionality
+   - Metrics and events logged
+   - Automatic rollback if issues detected
+
+### Advanced Features
+
+- **Manifest Updates**: Automatically updates K8s YAML with current image tags
+- **Dry-run Validation**: Pre-deployment YAML validation without applying
+- **Health Monitoring**: Real-time pod status and endpoint checks
+- **Rollback Automation**: Instant rollback on failure (if AUTO_ROLLBACK=true)
+- **Multi-Stage Deployment**: Each strategy has its own deployment logic
+- **Service Mesh Ready**: Supports traffic splitting and advanced routing
 
 ## 🎨 Frontend Features
 
@@ -534,57 +705,96 @@ The pipeline (``.github/workflows/main.yml``) is triggered on every push and pul
 
 ## 🏗️ Jenkins Integration
 
-### Jenkins BUILD Configuration
+## 🏗️ Kubernetes & Jenkins Integration
 
-For Jenkins integration:
+### Kubernetes Deployment
 
-1. **Create a new Jenkins Job** (Freestyle or Pipeline)
+The project includes K8s manifests in `k8s/deployment/` directory for all 5 deployment strategies:
+
+- **rolling-update.yaml**: Standard rolling update with gradual pod replacement
+- **blue-green-deployment.yaml**: Complete environment swap for instant rollback
+- **canary-release.yaml**: Gradual rollout to percentage of users
+- **ab-testing.yaml**: Header-based routing for A/B testing
+- **shadow-deployment.yaml**: Traffic mirroring for non-production testing
+
+### Jenkins Job Setup
+
+For Jenkins integration with Kubernetes deployment:
+
+1. **Create a Pipeline Job** in Jenkins
 2. **Source Code Management**:
    - Repository URL: Your GitHub repository
    - Credentials: GitHub SSH or token
-   - Branch: `*/main`
+   - Branch: `*/usr/rajkumar_palani/deployment_methodologies`
 
-3. **Build Triggers**:
-   ```
+3. **Pipeline Definition**:
+   - Select: "Pipeline script from SCM"
+   - SCM: Git
+   - Script Path: `Jenkinsfile`
+
+4. **Build Triggers**:
    - GitHub hook trigger for GITscm polling
-   ```
+   - Or: Build periodically (e.g., every hour)
 
-4. **Build Steps** (Execute shell):
-   ```bash
-   # Pull latest code
-   git pull origin main
+5. **Build Parameters**:
+   The pipeline will prompt for:
+   - `DEPLOYMENT_STRATEGY`: Choose deployment method
+   - `NAMESPACE`: Target Kubernetes namespace
+   - `AUTO_ROLLBACK`: Enable automatic rollback
 
-   # Create virtual environment
-   python -m venv venv
-   source venv/bin/activate
+### Pipeline Variables
 
-   # Install dependencies
-   pip install -r app/requirements.txt
+Set these in Jenkins before running:
 
-   # Run tests
-   cd app
-   pytest test_app.py -v --junitxml=results.xml
+```groovy
+// Credentials to create in Jenkins
+DOCKER_HUB_USERNAME = 'your-dockerhub-username'
+DOCKER_HUB_TOKEN = 'your-dockerhub-personal-access-token'
+SONARCLOUD_TOKEN = 'your-sonarcloud-token'
+KUBERNETES_CONTEXT = 'your-cluster-context'
+```
 
-   # Build Docker image
-   docker build -t aceest-fitness-test .
+### Deployment Manifest Configuration
 
-   # Docker Container run
-   docker run --rm -d --name aceest-fitness-test-container -p 5000:5000 aceest-fitness-test
-   ```
+Update these in `k8s/deployment/*.yaml` files:
 
-5. **Post-build Actions**:
-   - Publish test results (JUnit format)
-   - Archive Docker image
-   - Trigger deployment pipeline
+```yaml
+image: docker.io/your-username/aceest-fitness-backend:latest
+# Change to your Docker Hub username
+```
 
+### Health Checks
 
+The pipeline includes automatic health checks:
 
-### Jenkins Webhook Configuration
+```yaml
+# Backend health check endpoint
+GET /health → 200 OK
 
-1. Navigate to your GitHub repository settings
-2. Add webhook: `http://your-jenkins-server/github-webhook/`
-3. Trigger on: Push events
-4. This will automatically trigger Jenkins builds
+# Pod readiness probe
+kubctl get pods -l app=aceest-app
+→ READY: X/Y (all pods should be ready)
+
+# Service endpoints
+kubectl get endpoints aceest-app
+→ Shows active backend pods
+```
+
+### Rollback Procedure
+
+If deployment fails and `AUTO_ROLLBACK` is enabled:
+
+```bash
+# Automatic rollback command executed:
+kubectl rollout undo deployment/aceest-app -n ${NAMESPACE}
+
+# Manual rollback (if needed):
+kubectl rollout undo deployment/aceest-app -n default
+kubectl rollout history deployment/aceest-app
+
+# View rollout status:
+kubectl rollout status deployment/aceest-app -n default
+```
 
 ## 📊 Code Quality Metrics
 
