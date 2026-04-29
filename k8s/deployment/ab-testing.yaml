@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-app-a
+  labels:
+    app: aceest-app
+    variant: a
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest-app
+      variant: a
+  template:
+    metadata:
+      labels:
+        app: aceest-app
+        variant: a
+    spec:
+      containers:
+        - name: aceest-backend
+          image: docker.io/rajswastik/aceest-fitness-backend:v1
+          ports:
+            - containerPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-app-b
+  labels:
+    app: aceest-app
+    variant: b
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest-app
+      variant: b
+  template:
+    metadata:
+      labels:
+        app: aceest-app
+        variant: b
+    spec:
+      containers:
+        - name: aceest-backend
+          image: docker.io/rajswastik/aceest-fitness-backend:v2
+          ports:
+            - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-app-a
+spec:
+  selector:
+    app: aceest-app
+    variant: a
+  ports:
+    - port: 80
+      targetPort: 5000
+      name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-app-b
+spec:
+  selector:
+    app: aceest-app
+    variant: b
+  ports:
+    - port: 80
+      targetPort: 5000
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-app-ab-testing
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-by-header: "x-ab-test"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "b"
+spec:
+  rules:
+    - host: aceest.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aceest-app-a
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aceest-app-b
+                port:
+                  number: 80
+# Send normal traffic to variant A and header-based traffic to variant B for A/B testing.

@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-app-stable
+  labels:
+    app: aceest-app
+    track: stable
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: aceest-app
+      track: stable
+  template:
+    metadata:
+      labels:
+        app: aceest-app
+        track: stable
+    spec:
+      containers:
+        - name: aceest-backend
+          image: docker.io/rajswastik/aceest-fitness-backend:stable
+          ports:
+            - containerPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-app-canary
+  labels:
+    app: aceest-app
+    track: canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aceest-app
+      track: canary
+  template:
+    metadata:
+      labels:
+        app: aceest-app
+        track: canary
+    spec:
+      containers:
+        - name: aceest-backend
+          image: docker.io/rajswastik/aceest-fitness-backend:canary
+          ports:
+            - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-app
+spec:
+  selector:
+    app: aceest-app
+  ports:
+    - port: 80
+      targetPort: 5000
+      protocol: TCP
+      name: http
+  type: ClusterIP
+# Traffic is split by endpoint weight: the canary deployment receives a small percentage of requests based on replica count.

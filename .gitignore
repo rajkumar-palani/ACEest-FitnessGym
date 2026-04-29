@@ -48,7 +48,7 @@ htmlcov/
 aceest_fitness.db
 
 # Environment variables
-.env
+# .env
 .env.local
 .env.*.local
 
