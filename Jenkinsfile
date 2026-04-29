@@ -1,11 +1,5 @@
 pipeline {
     agent any
-    
-    // options {
-    //     timestamps()
-    //     timeout(time: 1, unit: 'HOURS')
-    //     skipDefaultCheckout()
-    // }
 
     parameters {
         choice(
@@ -35,8 +29,10 @@ pipeline {
         DOCKER_IMAGE_BACKEND = 'aceest-fitness-backend'
         DOCKER_IMAGE_FRONTEND = 'aceest-fitness-frontend'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
-        DOCKER_REGISTRY = 'docker.io/rajswastik'
+        DOCKER_REGISTRY = 'docker.io/<<username>>'
         DEPLOYMENT_DIR = 'k8s/deployment'
+        SONAR_HOST_URL = 'https://sonarcloud.io'
+        SONAR_TOKEN = credentials('sonar-token')
     }
 
     stages {
@@ -98,27 +94,18 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            when {
-                expression { return fileExists('/usr/bin/sonar-scanner') || fileExists('/usr/local/bin/sonar-scanner') }
-            }
             steps {
                 echo '🔍 Running SonarQube analysis...'
-                script {
-                    try {
-                        withSonarQubeEnv('SonarCloud') {
-                            sh '''
-                                sonar-scanner \
-                                -Dsonar.projectKey=devopscheck_aceest-fitnessgymapp \
-                                -Dsonar.organization=devopscheck \
-                                -Dsonar.sources=. \
-                                -Dsonar.inclusions=**/*.py,**/*.js,**/*.jsx \
-                                -Dsonar.exclusions=**/node_modules/**,**/k8s/**,**/docs/**,**/reference/**,**/nginx/**
-                            '''
-                        }
-                    } catch (Exception e) {
-                        echo "⚠️  SonarQube analysis skipped: ${e.message}"
-                    }
-                }
+                sh '''
+                    /opt/sonar-scanner/bin/sonar-scanner \
+                    -Dsonar.projectKey=<<ProjectKey>> \
+                    -Dsonar.organization=<<org>> \
+                    -Dsonar.sources=. \
+                    -Dsonar.host.url=https://sonarcloud.io \
+                    -Dsonar.login=${SONAR_TOKEN} \
+                    -Dsonar.inclusions=**/*.py,**/*.js,**/*.jsx \
+                    -Dsonar.exclusions=**/node_modules/**,**/k8s/**,**/docs/**,**/reference/**,**/nginx/**
+                '''
             }
         }
 
@@ -422,7 +409,6 @@ pipeline {
                     '''
                 }
             }
-            // slackSend channel: '#devops', message: "❌ Build ${env.BUILD_NUMBER} failed! Check logs for details."
         }
     }
 }
