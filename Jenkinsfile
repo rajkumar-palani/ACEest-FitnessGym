@@ -1,5 +1,11 @@
 pipeline {
     agent any
+    
+    // options {
+    //     timestamps()
+    //     timeout(time: 1, unit: 'HOURS')
+    //     skipDefaultCheckout()
+    // }
 
     parameters {
         choice(
@@ -30,7 +36,6 @@ pipeline {
         DOCKER_IMAGE_FRONTEND = 'aceest-fitness-frontend'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
         DOCKER_REGISTRY = 'docker.io/rajswastik'
-        SONAR_HOST_URL = 'http://192.168.9.45:9000'
         DEPLOYMENT_DIR = 'k8s/deployment'
     }
 
@@ -73,69 +78,46 @@ pipeline {
             }
         }
 
-        // stage('Test Backend') {
-        //     steps {
-        //         echo '🧪 Running backend tests...'
-        //         sh """
-        //             docker run --rm \\
-        //                 -v \$(pwd):/workspace \\
-        //                 -w /workspace \\
-        //                 python:3.11-slim \\
-        //                 sh -c "pip install -r app/requirements.txt && python -m pytest app/test_app.py -v --tb=short --cov=app --cov-report=xml --junitxml=junit.xml"
-        //         """
-        //     }
-        //     post {
-        //         always {
-        //             junit 'junit.xml'
-        //         }
-        //     }
-        // }
-
         stage('Test Backend') {
             steps {
                 echo '🧪 Running backend tests...'
                 sh """
                     docker run --rm \\
-                        --volumes-from \$(hostname) \\
-                        -w \$(pwd) \\
+                        --network host \\
+                        -v \$(pwd):/workspace \\
+                        -w /workspace \\
                         python:3.11-slim \\
-                        sh -c "pip install -r app/requirements.txt && python -m pytest app/test_app.py -v --tb=short --cov=. --cov-report=xml --junitxml=junit.xml"
+                        sh -c "pip install -r app/requirements.txt && python -m pytest app/test_app.py -v --tb=short --cov=app --cov-report=xml --junitxml=junit.xml"
                 """
             }
             post {
                 always {
-                    // Publish test results and coverage reports
                     junit 'junit.xml'
-                    // publishCoverage adapters: [coberturaAdapter('app/coverage.xml')]
                 }
             }
         }
 
         stage('SonarQube Analysis') {
+            when {
+                expression { return fileExists('/usr/bin/sonar-scanner') || fileExists('/usr/local/bin/sonar-scanner') }
+            }
             steps {
-                echo '🔍 Started SonarQube analysis...'
+                echo '🔍 Running SonarQube analysis...'
                 script {
-                    echo '🔍 Running SonarQube analysis...'
-                    // try {
-                    //     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    //         sh '''
-                    //             docker run --rm \
-                    //             -e SONAR_HOST_URL=${SONAR_HOST_URL} \
-                    //             -e SONAR_LOGIN=${SONAR_TOKEN} \
-                    //             -v $(pwd):/usr/src \
-                    //             -w /usr/src \
-                    //             sonarsource/sonar-scanner-cli \
-                    //             -Dsonar.projectKey=ACEest-FitnessGym \
-                    //             -Dsonar.sources=. \
-                    //             -Dsonar.host.url=${SONAR_HOST_URL} \
-                    //             -Dsonar.login=${SONAR_TOKEN} \
-                    //             -Dsonar.inclusions=**/*.py,**/*.js,**/*.jsx \
-                    //             -Dsonar.exclusions=**/node_modules/**,**/k8s/**,**/docs/**,**/reference/**,**/nginx/**
-                    //         '''
-                    //     }
-                    // } catch (Exception e) {
-                    //     echo "⚠️  SonarQube analysis skipped: ${e.message}"
-                    // }
+                    try {
+                        withSonarQubeEnv('SonarCloud') {
+                            sh '''
+                                sonar-scanner \
+                                -Dsonar.projectKey=devopscheck_aceest-fitnessgymapp \
+                                -Dsonar.organization=devopscheck \
+                                -Dsonar.sources=. \
+                                -Dsonar.inclusions=**/*.py,**/*.js,**/*.jsx \
+                                -Dsonar.exclusions=**/node_modules/**,**/k8s/**,**/docs/**,**/reference/**,**/nginx/**
+                            '''
+                        }
+                    } catch (Exception e) {
+                        echo "⚠️  SonarQube analysis skipped: ${e.message}"
+                    }
                 }
             }
         }
@@ -147,6 +129,7 @@ pipeline {
                         echo '🔒 Scanning backend for vulnerabilities...'
                         sh """
                             docker run --rm \
+                                --network host \\
                                 -v \$(pwd):/app \
                                 -w /app \
                                 python:3.11-slim \
@@ -159,6 +142,7 @@ pipeline {
                         echo '🔒 Scanning frontend dependencies...'
                         sh """
                             docker run --rm \
+                                --network host \\
                                 -v \$(pwd)/frontend:/app \
                                 -w /app \
                                 node:20-alpine \
