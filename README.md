@@ -705,6 +705,281 @@ The pipeline (``.github/workflows/main.yml``) is triggered on every push and pul
 
 ## 🏗️ Jenkins Integration
 
+## 📦 Kubernetes Manifests Reference
+
+### Directory Structure
+
+```
+k8s/
+└── deployment/
+    ├── rolling-update.yaml        # Standard gradual pod replacement
+    ├── blue-green-deployment.yaml # Complete environment swap
+    ├── canary-release.yaml        # Gradual rollout to % of users
+    ├── ab-testing.yaml            # Header-based routing for A/B tests
+    └── shadow-deployment.yaml     # Traffic mirroring for non-prod testing
+```
+
+### Manifest File Details
+
+#### 1️⃣ rolling-update.yaml
+**Use Case**: Standard production deployments with gradual pod replacement
+
+**Contains**:
+- **Deployment** (`aceest-app`):
+  - Replicas: 4
+  - Strategy: RollingUpdate
+  - maxSurge: 1 (one extra pod allowed during update)
+  - maxUnavailable: 1 (one pod can be down during update)
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:latest`
+- **Service** (`aceest-app`):
+  - Type: ClusterIP
+  - Port: 80 (external) → 5000 (container)
+
+**Key Configuration**:
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+```
+
+**Manual Deployment**:
+```bash
+kubectl apply -f k8s/deployment/rolling-update.yaml
+kubectl get deployment aceest-app -w  # Watch rollout
+```
+
+---
+
+#### 2️⃣ blue-green-deployment.yaml
+**Use Case**: Zero-downtime deployments with instant rollback capability
+
+**Contains**:
+- **Deployment** (`aceest-app-blue`):
+  - Replicas: 3
+  - Labels: `track: blue`, `traffic-route: inactive`
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:blue`
+- **Deployment** (`aceest-app-green`):
+  - Replicas: 3
+  - Labels: `track: green`, `traffic-route: active`
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:green`
+- **Service** (`aceest-app`):
+  - Selector dynamically switches between blue/green
+
+**Key Configuration**:
+```yaml
+# Service routes to active environment
+selector:
+  app: aceest-app
+  traffic-route: active  # Toggle: active ↔ inactive
+```
+
+**Manual Deployment & Switch**:
+```bash
+# Deploy both environments
+kubectl apply -f k8s/deployment/blue-green-deployment.yaml
+
+# Check status
+kubectl get pods -l app=aceest-app
+
+# Switch traffic from blue to green
+kubectl patch service aceest-app -p '{"spec":{"selector":{"traffic-route":"active"}}}'
+
+# Rollback if needed (switch back to blue)
+kubectl patch service aceest-app -p '{"spec":{"selector":{"traffic-route":"inactive"}}}'
+```
+
+---
+
+#### 3️⃣ canary-release.yaml
+**Use Case**: Gradual rollout to percentage of users for testing new versions
+
+**Contains**:
+- **Deployment** (`aceest-app-stable`):
+  - Replicas: 5 (85% of traffic)
+  - Labels: `track: stable`
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:stable`
+- **Deployment** (`aceest-app-canary`):
+  - Replicas: 1 (15% of traffic)
+  - Labels: `track: canary`
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:canary`
+- **Service** (`aceest-app`):
+  - Shared service between stable and canary
+  - Endpoint-based traffic splitting
+
+**Traffic Split Calculation**:
+```
+Stable Replicas: 5
+Canary Replicas: 1
+Total: 6 replicas
+
+Stable Traffic: 5/6 = ~83%
+Canary Traffic: 1/6 = ~17%
+```
+
+**Manual Deployment**:
+```bash
+kubectl apply -f k8s/deployment/canary-release.yaml
+
+# Monitor canary metrics for 5+ minutes
+kubectl logs -l track=canary --tail=50 -f
+
+# Promote canary to stable (scale stable down, canary up)
+kubectl scale deployment aceest-app-stable --replicas=1
+kubectl scale deployment aceest-app-canary --replicas=5
+
+# Rollback if needed (scale canary down)
+kubectl scale deployment aceest-app-canary --replicas=0
+```
+
+---
+
+#### 4️⃣ ab-testing.yaml
+**Use Case**: Test two versions simultaneously with header-based routing
+
+**Contains**:
+- **Deployment** (`aceest-app-a`):
+  - Replicas: 3
+  - Labels: `variant: a` (default traffic)
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:a`
+- **Deployment** (`aceest-app-b`):
+  - Replicas: 3
+  - Labels: `variant: b` (header-based traffic)
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:b`
+- **Service** (`aceest-app`):
+  - Routes requests based on HTTP headers
+- **Ingress** (optional):
+  - Header-based routing rule: `x-ab-test: b`
+
+**Routing Logic**:
+```
+Request Header: x-ab-test: b  → Routes to Variant B
+All other requests             → Routes to Variant A (default)
+```
+
+**Manual Deployment & Testing**:
+```bash
+kubectl apply -f k8s/deployment/ab-testing.yaml
+
+# Test Variant A (default)
+curl http://aceest-app.default.svc.cluster.local/api/clients
+
+# Test Variant B (with header)
+curl -H "x-ab-test: b" http://aceest-app.default.svc.cluster.local/api/clients
+
+# Check pod distribution
+kubectl get pods -l app=aceest-app
+```
+
+---
+
+#### 5️⃣ shadow-deployment.yaml
+**Use Case**: Test new code with real production traffic (mirroring) without affecting users
+
+**Contains**:
+- **Deployment** (`aceest-app-primary`):
+  - Replicas: 4 (handles real user traffic)
+  - Labels: `tier: primary`
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:primary`
+- **Deployment** (`aceest-app-shadow`):
+  - Replicas: 1 (receives mirrored traffic, not used for responses)
+  - Labels: `tier: shadow`
+  - Image: `docker.io/rajswastik/aceest-fitness-backend:shadow`
+- **Service** (`aceest-app`):
+  - Only routes to primary (shadow receives mirrored traffic)
+
+**How It Works**:
+```
+User Request
+    ↓
+[Primary Pod] ← Responds to user
+    ↓
+[Proxy/ServiceMesh] ← Mirrors request
+    ↓
+[Shadow Pod] ← Processes but response ignored
+```
+
+**Manual Deployment**:
+```bash
+kubectl apply -f k8s/deployment/shadow-deployment.yaml
+
+# Monitor shadow deployment metrics
+kubectl logs -l tier=shadow --tail=50 -f
+
+# Check that shadow pods are running
+kubectl get pods -l tier=shadow
+
+# Primary handles all traffic
+kubectl get endpoints aceest-app
+```
+
+**Requirements for Shadow Traffic Mirroring**:
+- Service mesh: Istio or Linkerd (for automatic mirroring)
+- Or: Proxy configuration in ingress/network policy
+
+---
+
+### Manual Deployment Commands
+
+#### Deploy Any Strategy
+```bash
+# Rolling Update
+kubectl apply -f k8s/deployment/rolling-update.yaml
+
+# Blue-Green
+kubectl apply -f k8s/deployment/blue-green-deployment.yaml
+
+# Canary
+kubectl apply -f k8s/deployment/canary-release.yaml
+
+# A/B Testing
+kubectl apply -f k8s/deployment/ab-testing.yaml
+
+# Shadow
+kubectl apply -f k8s/deployment/shadow-deployment.yaml
+```
+
+#### Verify Deployment
+```bash
+# Check deployments
+kubectl get deployments
+
+# Check pods
+kubectl get pods -o wide
+
+# Check services
+kubectl get services
+
+# Check endpoints
+kubectl get endpoints
+```
+
+#### Monitor Deployment
+```bash
+# Watch rolling update
+kubectl rollout status deployment/aceest-app
+
+# View pod events
+kubectl describe pods -l app=aceest-app
+
+# Check logs
+kubectl logs -l app=aceest-app --tail=50 -f
+```
+
+#### Update Image Tag (Without Jenkins)
+```bash
+# Edit deployment manually
+kubectl set image deployment/aceest-app \
+  aceest-backend=docker.io/rajswastik/aceest-fitness-backend:v2.0
+
+# Or use patch
+kubectl patch deployment aceest-app -p \
+  '{"spec":{"template":{"spec":{"containers":[{"name":"aceest-backend","image":"docker.io/rajswastik/aceest-fitness-backend:v2.0"}]}}}}'
+```
+
+---
+
 ## 🏗️ Kubernetes & Jenkins Integration
 
 ### Kubernetes Deployment
